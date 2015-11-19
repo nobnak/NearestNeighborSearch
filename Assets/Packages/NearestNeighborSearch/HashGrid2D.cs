@@ -4,6 +4,7 @@ using System.Collections.Generic;
 namespace NearestNeighborSearch {
 
 	public class HashGrid2D : MonoBehaviour {
+		public Transform targetSpace;
 		public int cellCount = 37;
 		public float cellSize = 1f;
 
@@ -30,22 +31,38 @@ namespace NearestNeighborSearch {
 			ClearGrid();
 			FillGrid();
 		}
-		public IEnumerable<Neighbor> Neighbors(Vector2 p, float distance) {
+		public IEnumerable<Neighbor> Neighbors(int id0, float distance) {
 			int x, y;
 			var limitSqrDistance = distance * distance;
+			var p = _positions[id0];
 			Hash(p, out x, out y);
 			for (var dj = -1; dj <= 1; dj++) {
 				for (var di = -1; di <= 1; di++) {
 					var ix = Repeat(x + di);
 					var iy = Repeat(y + dj);
-					foreach (var id in _cells[ix, iy]) {
-						var q = _positions[id];
+					foreach (var id1 in _cells[ix, iy]) {
+						if (id0 == id1)
+							continue;
+						var q = _positions[id1];
 						var sqrDist = (q - p).sqrMagnitude;
 						if (sqrDist < limitSqrDistance)
-							yield return new Neighbor(id, _points[id], _positions[id], sqrDist);
+							yield return new Neighbor(id1, _points[id1], _positions[id1], sqrDist);
 					}
 				}
 			}
+		}
+		public bool Nearest(int id, float distance, out Neighbor nearest) {
+			var minSqrDist = distance * distance;
+			var found = false;
+			nearest = default(Neighbor);
+			foreach (var n in Neighbors(id, distance)) {
+				if (n.sqrDistance < minSqrDist) {
+					minSqrDist = n.sqrDistance;
+					found = true;
+					nearest = n;
+				}
+			}
+			return found;
 		}
 		public int PointCount() { return _pointCount; }
 		public Transform GetTransform(int id) { return _points[id]; }
@@ -66,7 +83,7 @@ namespace NearestNeighborSearch {
 			_gridSize = cellCount * cellSize;
 			for (var i = 0; i < _pointCount; i++) {
 				int x, y;
-				var pos = _positions [i] = (Vector2)_points [i].position;
+				var pos = _positions [i] = (Vector2)targetSpace.InverseTransformPoint(_points [i].position);
 				Hash (pos, out x, out y);
 				_cells [x, y].Add(i);
 			}
