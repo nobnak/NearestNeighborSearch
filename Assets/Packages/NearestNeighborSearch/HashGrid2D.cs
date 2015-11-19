@@ -20,10 +20,10 @@ namespace NearestNeighborSearch {
 			_positions = new List<Vector2>();
 		}
 
-		public void Add(Transform p) {
-			_pointCount++;
+		public int Add(Transform p) {
 			_points.Add(p);
 			_positions.Add(Vector2.zero);
+			return _pointCount++;
 		}
 		public void Build() {
 			if (_cells == null || _cells.GetLength(0) != cellCount || _cells.GetLength(1) != cellCount)
