@@ -31,9 +31,9 @@ namespace NearestNeighborSearch {
 			ClearGrid();
 			FillGrid();
 		}
-		public IEnumerable<Neighbor> Neighbors(int id0, float distance) {
+		public IEnumerable<Neighbor> Neighbors(int id0) {
 			int x, y;
-			var limitSqrDistance = distance * distance;
+			var limitSqrDist = 2f * cellSize * cellSize;
 			var p = _positions[id0];
 			Hash(p, out x, out y);
 			for (var dj = -1; dj <= 1; dj++) {
@@ -45,17 +45,17 @@ namespace NearestNeighborSearch {
 							continue;
 						var q = _positions[id1];
 						var sqrDist = (q - p).sqrMagnitude;
-						if (sqrDist < limitSqrDistance)
+						if (sqrDist < limitSqrDist)
 							yield return new Neighbor(id1, _points[id1], _positions[id1], sqrDist);
 					}
 				}
 			}
 		}
-		public bool Nearest(int id, float distance, out Neighbor nearest) {
-			var minSqrDist = distance * distance;
+		public bool Nearest(int id, out Neighbor nearest) {
+			var minSqrDist = float.MaxValue;
 			var found = false;
 			nearest = default(Neighbor);
-			foreach (var n in Neighbors(id, distance)) {
+			foreach (var n in Neighbors(id)) {
 				if (n.sqrDistance < minSqrDist) {
 					minSqrDist = n.sqrDistance;
 					found = true;

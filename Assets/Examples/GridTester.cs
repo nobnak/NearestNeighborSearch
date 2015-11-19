@@ -27,8 +27,7 @@ public class GridTester : MonoBehaviour {
 		hashGrid.Build();
 	}
 	void OnDrawGizmos() {
-		var d = gizmoDistance;
-
+		var limitSqrDist = gizmoDistance * gizmoDistance;
 		var count = hashGrid.PointCount();
 		for (var id = 0; id < count; id++) {
 			var t = hashGrid.GetTransform(id);
@@ -38,14 +37,14 @@ public class GridTester : MonoBehaviour {
 			default:
 				break;
 			case DebugModeEnum.Distance:
-				foreach (var n in hashGrid.Neighbors(id, d)) {
-					if (id < n.id)
+				foreach (var n in hashGrid.Neighbors(id)) {
+					if (id < n.id && n.sqrDistance < limitSqrDist)
 						Gizmos.DrawLine(t.position, n.point.position);
 				}
 				break;
 			case DebugModeEnum.Nearest:
 				HashGrid2D.Neighbor nearest;
-				if (hashGrid.Nearest(id, d, out nearest))
+				if (hashGrid.Nearest(id, out nearest))
 					Gizmos.DrawLine(t.position, nearest.point.position);
 				break;
 			}
