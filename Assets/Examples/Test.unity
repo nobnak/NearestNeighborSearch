@@ -127,7 +127,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   hashGrid: {fileID: 45299952}
   pointfab: {fileID: 152398, guid: a66b6f2b546783949aa358df55d3d4c5, type: 2}
-  angularSpeed: {x: 0, y: 30, z: 0}
+  angularSpeed: {x: 5, y: 0, z: 30}
   radius: 5
   count: 100
   gizmoDistance: 1
