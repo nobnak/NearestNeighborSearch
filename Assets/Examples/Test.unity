@@ -130,8 +130,6 @@ MonoBehaviour:
   angularSpeed: {x: 5, y: 0, z: 30}
   radius: 5
   count: 100
-  gizmoDistance: 1
-  debugMode: 2
 --- !u!114 &45299952
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -145,7 +143,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetSpace: {fileID: 806257054}
   cellCount: 37
-  cellSize: 1
+  cellSize: .5
+  debug:
+    debugMode: 1
 --- !u!1 &456202966
 GameObject:
   m_ObjectHideFlags: 0

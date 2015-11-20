@@ -7,31 +7,41 @@ namespace NearestNeighborSearch {
 		public Transform targetSpace;
 		public int cellCount = 37;
 		public float cellSize = 1f;
+		public GizmoDrawer debug;
 
 		int _pointCount;
 		float _gridSize;
+		bool _built = false;
+		bool _initialized = false;
 		List<Transform> _points;
 		List<Vector2> _positions;
+		Dictionary<Transform, int> _map;
 		List<int>[,] _cells;
 
-		void Awake() {
-			_pointCount = 0;
-			_points = new List<Transform>();
-			_positions = new List<Vector2>();
-		}
-
 		public int Add(Transform p) {
+			_built = false;
 			_points.Add(p);
 			_positions.Add(Vector2.zero);
+			_map.Add(p, _pointCount);
 			return _pointCount++;
 		}
+		public void Clear() {
+			_built = false;
+			_points.Clear();
+			_positions.Clear();
+			_map.Clear();
+			_pointCount = 0;
+		}
 		public void Build() {
-			if (_cells == null || _cells.GetLength(0) != cellCount || _cells.GetLength(1) != cellCount)
-				InitGrid();
+			_built = true;
+			InitGrid();
 			ClearGrid();
 			FillGrid();
 		}
 		public IEnumerable<Neighbor> Neighbors(int id0) {
+			if (!_built)
+				yield break;
+
 			int x, y;
 			var limitSqrDist = 2f * cellSize * cellSize;
 			var p = _positions[id0];
@@ -52,6 +62,11 @@ namespace NearestNeighborSearch {
 			}
 		}
 		public bool Nearest(int id, out Neighbor nearest) {
+			if (!_built) {
+				nearest = default(Neighbor);
+				return false;
+			}
+
 			var minSqrDist = float.MaxValue;
 			var found = false;
 			nearest = default(Neighbor);
@@ -67,8 +82,26 @@ namespace NearestNeighborSearch {
 		public int PointCount() { return _pointCount; }
 		public Transform GetTransform(int id) { return _points[id]; }
 		public Vector2 GetPosition(int id) { return _positions[id]; }
+		public int GetId(Transform t) { return _map[t]; }
 
-		void InitGrid () {
+		void Awake() {
+			_pointCount = 0;
+			_points = new List<Transform>();
+			_positions = new List<Vector2>();
+			_map = new Dictionary<Transform, int>();
+			InitGrid();
+		}
+		void OnDrawGizmos() {
+			if (_initialized)
+				debug.DrawGizmos(this);
+		}
+
+		void InitGrid () {			
+			_initialized = (_cells != null && _cells.GetLength(0) == cellCount && _cells.GetLength(1) == cellCount);
+			if (_initialized)
+				return;
+			_initialized = true;
+
 			_cells = new List<int>[cellCount, cellCount];
 			for (var j = 0; j < cellCount; j++)
 				for (var i = 0; i < cellCount; i++)
@@ -114,6 +147,37 @@ namespace NearestNeighborSearch {
 				this.point = point;
 				this.position = position;
 				this.sqrDistance = sqrDistance;
+			}
+		}
+
+		[System.Serializable]
+		public class GizmoDrawer {
+			public enum DebugModeEnum { Normal = 0, Distance, Nearest }
+
+			public DebugModeEnum debugMode;
+			
+			public void DrawGizmos(HashGrid2D hashGrid) {
+				var count = hashGrid.PointCount();
+				for (var id = 0; id < count; id++) {
+					var t = hashGrid.GetTransform(id);
+					
+					Gizmos.color = Color.yellow;
+					switch (debugMode) {
+					default:
+						break;
+					case DebugModeEnum.Distance:
+						foreach (var n in hashGrid.Neighbors(id)) {
+							if (id < n.id)
+								Gizmos.DrawLine(t.position, n.point.position);
+						}
+						break;
+					case DebugModeEnum.Nearest:
+						HashGrid2D.Neighbor nearest;
+						if (hashGrid.Nearest(id, out nearest))
+							Gizmos.DrawLine(t.position, nearest.point.position);
+						break;
+					}
+				}
 			}
 		}
 	}
