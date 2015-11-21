@@ -94,6 +94,7 @@ GameObject:
   m_Component:
   - 4: {fileID: 45299950}
   - 114: {fileID: 45299952}
+  - 114: {fileID: 45299953}
   - 114: {fileID: 45299951}
   m_Layer: 0
   m_Name: Pivot
@@ -125,7 +126,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46ea14738978ed0449f028d2dc65a4ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hashGrid: {fileID: 45299952}
+  hashGrid: {fileID: 45299953}
   pointfab: {fileID: 152398, guid: a66b6f2b546783949aa358df55d3d4c5, type: 2}
   angularSpeed: {x: 5, y: 0, z: 30}
   radius: 5
@@ -142,8 +143,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   targetSpace: {fileID: 806257054}
-  cellCount: 37
-  cellSize: .5
+  cellSize: 1
+  hashSize: 37
+  debug:
+    debugMode: 1
+--- !u!114 &45299953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 45299949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57fdf42b648291247b861820700615b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetSpace: {fileID: 0}
+  cellSize: 1
+  hashSize: 37
   debug:
     debugMode: 1
 --- !u!1 &456202966

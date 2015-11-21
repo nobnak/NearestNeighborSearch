@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace NearestNeighborSearch {
 
-	public class HashGrid2D : BaseHashGrid {
+	public class HashGrid3D : BaseHashGrid {
 		public GizmoDrawer debug;
 
 		bool _built = false;
@@ -34,7 +34,7 @@ namespace NearestNeighborSearch {
 				_points[i].Update(Hash);
 			_points.Sort();
 
-			var cellCount = hashSize * hashSize;
+			var cellCount = hashSize * hashSize * hashSize;
 			if (_cells == null || _cells.Length != cellCount)
 				_cells = new Cell[cellCount];
 			System.Array.Clear (_cells, 0, _cells.Length);
@@ -58,21 +58,23 @@ namespace NearestNeighborSearch {
 			}
 			_cells [start.cellId] = new Cell (offset, count);
 		}
-		public IEnumerable<Neighbor> Find(Vector2 center) {
+		public IEnumerable<Neighbor> Find(Vector3 center) {
 			var limitSqrDist = 2f * cellSize * cellSize;
-			int x, y;
-			Discretize(center, out x, out y);
-			for (var dy = -1; dy <= 1; dy++) {
-				for (var dx = -1; dx <= 1; dx++) {
-					var id0 = Hash(Repeat(x + dx), Repeat(y + dy));
-					var cell = _cells[id0];
-					for (var i = 0; i < cell.length; i++) {
-						var id1 = i + cell.startIndex;
-						var p = _points[id1];
-						var path = p.position - center;
-						var sqrDist = path.sqrMagnitude;
-						if (sqrDist < limitSqrDist)
-							yield return new Neighbor(id1, p, sqrDist);
+			int x, y, z;
+			Discretize(center, out x, out y, out z);
+			for (var dz = -1; dz <= 1; dz++) {
+				for (var dy = -1; dy <= 1; dy++) {
+					for (var dx = -1; dx <= 1; dx++) {
+						var id0 = Hash (Repeat (x + dx), Repeat (y + dy), Repeat(z + dz));
+						var cell = _cells [id0];
+						for (var i = 0; i < cell.length; i++) {
+							var id1 = i + cell.startIndex;
+							var p = _points [id1];
+							var path = p.position - center;
+							var sqrDist = path.sqrMagnitude;
+							if (sqrDist < limitSqrDist)
+								yield return new Neighbor (id1, p, sqrDist);
+						}
 					}
 				}
 			}
@@ -80,16 +82,16 @@ namespace NearestNeighborSearch {
 
 		public class Node : System.IComparable<Node> {
 			public int cellId;
-			public Vector2 position;
+			public Vector3 position;
 			public Transform point;
 
 			public Node(Transform point) {
 				this.cellId = -1;
-				this.position = Vector2.zero;
+				this.position = Vector3.zero;
 				this.point = point;
 			}
-			public void Update(System.Func<Vector2, int> Hash) {
-				position = (Vector2)point.position;
+			public void Update(System.Func<Vector3, int> Hash) {
+				position = point.position;
 				cellId = Hash (position);
 			}
 
@@ -127,7 +129,7 @@ namespace NearestNeighborSearch {
 
 			public DebugModeEnum debugMode;
 
-			public void DrawGizmos(HashGrid2D hashGrid) {
+			public void DrawGizmos(HashGrid3D hashGrid) {
 				if (debugMode == DebugModeEnum.Normal)
 					return;
 

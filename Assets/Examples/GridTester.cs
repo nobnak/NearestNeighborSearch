@@ -4,7 +4,7 @@ using NearestNeighborSearch;
 using System.Collections.Generic;
 
 public class GridTester : MonoBehaviour {
-	public HashGrid2D hashGrid;
+	public BaseHashGrid hashGrid;
 	public GameObject pointfab;
 	public Vector3 angularSpeed;
 	public float radius = 1f;
