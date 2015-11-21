@@ -4,150 +4,159 @@ using System.Collections.Generic;
 namespace NearestNeighborSearch {
 
 	public class HashGrid2D : MonoBehaviour {
-		public Transform targetSpace;
-		public int cellCount = 37;
-		public float cellSize = 1f;
 		public GizmoDrawer debug;
+		public Transform targetSpace;
+		public float cellSize = 1f;
+		public int hashSize = 37;
 
-		int _pointCount;
-		float _gridSize;
 		bool _built = false;
-		bool _initialized = false;
-		List<Transform> _points;
-		List<Vector2> _positions;
-		Dictionary<Transform, int> _map;
-		List<int>[,] _cells;
+		Cell[] _cells;
+		List<Node> _points;
 
-		public int Add(Transform p) {
+		void Awake() {
+			_points = new List<Node>();
+		}
+		void OnDrawGizmos() {
+			if (_built)
+				debug.DrawGizmos (this);
+		}
+
+		public Cell[] Cells { get { return _cells; } }
+		public List<Node> Points { get { return _points; } }
+
+		public void Add(Transform p) {
 			_built = false;
-			_points.Add(p);
-			_positions.Add(Vector2.zero);
-			_map.Add(p, _pointCount);
-			return _pointCount++;
+			_points.Add(new Node(p));
 		}
 		public void Clear() {
 			_built = false;
 			_points.Clear();
-			_positions.Clear();
-			_map.Clear();
-			_pointCount = 0;
 		}
 		public void Build() {
 			_built = true;
-			InitGrid();
-			ClearGrid();
-			FillGrid();
-		}
-		public IEnumerable<Neighbor> Neighbors(int id0) {
-			if (!_built)
-				yield break;
+			var pointCount = _points.Count;
+			for (var i = 0; i < pointCount; i++)
+				_points[i].Update(Hash);
+			_points.Sort();
 
-			int x, y;
+			var cellCount = hashSize * hashSize;
+			if (_cells == null || _cells.Length != cellCount)
+				_cells = new Cell[cellCount];
+			System.Array.Clear (_cells, 0, _cells.Length);
+
+			if (pointCount == 0)
+				return;
+			var start = _points [0];
+			var curr = start;
+			var offset = 0;
+			var count = 1;
+			for (var i = 1; i < pointCount; i++) {
+				curr = _points[i];
+				if (start.cellId != curr.cellId) {
+					_cells[start.cellId] = new Cell(offset, count);
+					offset = i;
+					count = 1;
+					start = curr;
+				} else {
+					count++;
+				}
+			}
+			_cells [start.cellId] = new Cell (offset, count);
+		}
+		public IEnumerable<Neighbor> Find(Vector2 center) {
 			var limitSqrDist = 2f * cellSize * cellSize;
-			var p = _positions[id0];
-			Hash(p, out x, out y);
-			for (var dj = -1; dj <= 1; dj++) {
-				for (var di = -1; di <= 1; di++) {
-					var ix = Repeat(x + di);
-					var iy = Repeat(y + dj);
-					foreach (var id1 in _cells[ix, iy]) {
-						if (id0 == id1)
-							continue;
-						var q = _positions[id1];
-						var sqrDist = (q - p).sqrMagnitude;
+			int x, y;
+			Discretize(center, out x, out y);
+			for (var dy = -1; dy <= 1; dy++) {
+				for (var dx = -1; dx <= 1; dx++) {
+					var id0 = Hash(Repeat(x + dx), Repeat(y + dy));
+					var cell = _cells[id0];
+					for (var i = 0; i < cell.length; i++) {
+						var id1 = i + cell.startIndex;
+						var p = _points[id1];
+						var path = p.position - center;
+						var sqrDist = path.sqrMagnitude;
 						if (sqrDist < limitSqrDist)
-							yield return new Neighbor(id1, _points[id1], _positions[id1], sqrDist);
+							yield return new Neighbor(id1, p, sqrDist);
 					}
 				}
 			}
 		}
-		public bool Nearest(int id, out Neighbor nearest) {
-			if (!_built) {
-				nearest = default(Neighbor);
-				return false;
-			}
 
-			var minSqrDist = float.MaxValue;
-			var found = false;
-			nearest = default(Neighbor);
-			foreach (var n in Neighbors(id)) {
-				if (n.sqrDistance < minSqrDist) {
-					minSqrDist = n.sqrDistance;
-					found = true;
-					nearest = n;
-				}
-			}
-			return found;
+		void Discretize(Vector2 p, out int x, out int y) {
+			x = Repeat((int)(p.x / cellSize));
+			y = Repeat((int)(p.y / cellSize));
 		}
-		public int PointCount() { return _pointCount; }
-		public Transform GetTransform(int id) { return _points[id]; }
-		public Vector2 GetPosition(int id) { return _positions[id]; }
-		public int GetId(Transform t) { return _map[t]; }
-
-		void Awake() {
-			_pointCount = 0;
-			_points = new List<Transform>();
-			_positions = new List<Vector2>();
-			_map = new Dictionary<Transform, int>();
-			InitGrid();
+		int Hash(int x, int y) {
+			return x + hashSize * y;
 		}
-		void OnDrawGizmos() {
-			if (_initialized)
-				debug.DrawGizmos(this);
+		int Hash(Vector2 p) {
+			int x, y;
+			Discretize (p, out x, out y);
+			return Hash(x, y);
 		}
-
-		void InitGrid () {			
-			_initialized = (_cells != null && _cells.GetLength(0) == cellCount && _cells.GetLength(1) == cellCount);
-			if (_initialized)
-				return;
-			_initialized = true;
-
-			_cells = new List<int>[cellCount, cellCount];
-			for (var j = 0; j < cellCount; j++)
-				for (var i = 0; i < cellCount; i++)
-					_cells [i, j] = new List<int> ();
-		}
-		void ClearGrid () {
-			for (var j = 0; j < cellCount; j++)
-				for (var i = 0; i < cellCount; i++)
-					_cells [i, j].Clear ();
-		}
-		void FillGrid() {
-			_gridSize = cellCount * cellSize;
-			for (var i = 0; i < _pointCount; i++) {
-				int x, y;
-				var pos = _positions [i] = (Vector2)targetSpace.InverseTransformPoint(_points [i].position);
-				Hash (pos, out x, out y);
-				_cells [x, y].Add(i);
-			}
-		}
-		void Hash(Vector2 pos, out int ix, out int iy) {
-			ix = (int)((pos.x - Mathf.FloorToInt(pos.x / _gridSize) * _gridSize) / cellSize);
-			iy = (int)((pos.y - Mathf.FloorToInt(pos.y / _gridSize) * _gridSize) / cellSize);
-
-			ix = Repeat(ix);
-			iy = Repeat(iy);
+		void Unhash(int hash, out int x, out int y) {
+			y = hash / hashSize;
+			x = hash - y * hashSize;
 		}
 		int Repeat(int x) {
-			while (x < 0)
-				x += cellCount;
-			while (x >= cellCount)
-				x -= cellCount;
-			return x;
+			if (x < 0)
+				return x - ((x + 1) / hashSize - 1) * hashSize;
+			else
+				return x - (x / hashSize) * hashSize;
 		}
 
-		public struct Neighbor {
+
+		public class Node : System.IComparable<Node> {
+			public int cellId;
+			public Vector2 position;
+			public Transform point;
+
+			public Node(Transform point) {
+				this.cellId = -1;
+				this.position = Vector2.zero;
+				this.point = point;
+			}
+			public void Update(System.Func<Vector2, int> Hash) {
+				position = (Vector2)point.position;
+				cellId = Hash (position);
+			}
+
+			#region IComparable implementation
+			public int CompareTo (Node other) {
+				if (other == null)
+					return -1;
+				return cellId - other.cellId;
+			}
+			#endregion
+		}
+		public struct Cell {
+			public int startIndex;
+			public int length;
+
+			public Cell(int startIndex, int length) {
+				this.startIndex = startIndex;
+				this.length = length;
+			}
+		}
+
+		public struct Neighbor : System.IComparable<Neighbor> {
 			public readonly int id;
 			public readonly float sqrDistance;
-			public readonly Transform point;
-			public readonly Vector2 position;
+			public readonly Node node;
 
-			public Neighbor(int id, Transform point, Vector2 position, float sqrDistance) {
+			public Neighbor(int id, Node node, float sqrDistance) {
 				this.id = id;
-				this.point = point;
-				this.position = position;
+				this.node = node;
 				this.sqrDistance = sqrDistance;
 			}
+
+			#region IComparable implementation
+			public int CompareTo (Neighbor other) {
+				var diff = sqrDistance - other.sqrDistance;
+				return diff < 0 ? -1 : (diff > 0 ? +1 : 0);
+			}
+			#endregion
 		}
 
 		[System.Serializable]
@@ -155,26 +164,32 @@ namespace NearestNeighborSearch {
 			public enum DebugModeEnum { Normal = 0, Distance, Nearest }
 
 			public DebugModeEnum debugMode;
-			
+
 			public void DrawGizmos(HashGrid2D hashGrid) {
-				var count = hashGrid.PointCount();
-				for (var id = 0; id < count; id++) {
-					var t = hashGrid.GetTransform(id);
-					
-					Gizmos.color = Color.yellow;
+				if (debugMode == DebugModeEnum.Normal)
+					return;
+
+				Gizmos.color = Color.yellow;
+
+				var points = hashGrid.Points;
+				var pointCount = points.Count;
+				for (var i = 0; i < pointCount; i++) {
+					var p = points [i];
+					var neighbors = new SortedList<float, Neighbor> ();
+					foreach (var n in hashGrid.Find(p.position))
+						if (p != n.node)
+							neighbors.Add(n.sqrDistance, n);
+
 					switch (debugMode) {
-					default:
-						break;
 					case DebugModeEnum.Distance:
-						foreach (var n in hashGrid.Neighbors(id)) {
-							if (id < n.id)
-								Gizmos.DrawLine(t.position, n.point.position);
-						}
+						foreach (var n in neighbors)
+							Gizmos.DrawLine(p.point.position, n.Value.node.point.position);
 						break;
 					case DebugModeEnum.Nearest:
-						HashGrid2D.Neighbor nearest;
-						if (hashGrid.Nearest(id, out nearest))
-							Gizmos.DrawLine(t.position, nearest.point.position);
+						if (neighbors.Count > 0) {
+							var n = neighbors.Values[0];
+							Gizmos.DrawLine(p.point.position, n.node.point.position);
+						}
 						break;
 					}
 				}
