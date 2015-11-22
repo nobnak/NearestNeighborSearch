@@ -126,7 +126,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46ea14738978ed0449f028d2dc65a4ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hashGrid: {fileID: 45299953}
+  hashGrid: {fileID: 45299952}
   pointfab: {fileID: 152398, guid: a66b6f2b546783949aa358df55d3d4c5, type: 2}
   angularSpeed: {x: 0, y: 5, z: 0}
   radius: 5

@@ -17,10 +17,11 @@ public class GridTester : MonoBehaviour {
 			p.transform.localPosition = radius * Random.insideUnitSphere;
 			hashGrid.Add(p.transform);
 		}
-		StartCoroutine(ContinuousBuilder(1f));
+		//StartCoroutine(ContinuousBuilder(1f));
 	}
 	void Update () {
 		transform.localRotation *= Quaternion.Euler(angularSpeed * Time.deltaTime);
+		hashGrid.Build ();
 	}
 
 	IEnumerator ContinuousBuilder(float interval) {
