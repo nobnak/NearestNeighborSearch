@@ -7,21 +7,21 @@ namespace NearestNeighborSearch {
 		public GizmoDrawer debug;
 
 		bool _built = false;
-		List<Node> _points;
+		List<Node<Vector2>> _points;
 
 		void Awake() {
-			_points = new List<Node>();
+			_points = new List<Node<Vector2>>();
 		}
 		void OnDrawGizmos() {
 			if (_built)
 				debug.DrawGizmos (this);
 		}
 
-		public List<Node> Points { get { return _points; } }
+		public List<Node<Vector2>> Points { get { return _points; } }
 
 		public override void Add(Transform p) {
 			_built = false;
-			_points.Add(new Node(p));
+			_points.Add(new Node<Vector2>(p));
 		}
 		public override void Clear() {
 			_built = false;
@@ -30,8 +30,11 @@ namespace NearestNeighborSearch {
 		public override void Build() {
 			_built = true;
 			var pointCount = _points.Count;
-			for (var i = 0; i < pointCount; i++)
-				_points[i].Update(Hash);
+			for (var i = 0; i < pointCount; i++) {
+				var p = _points[i];
+				var pos = (Vector2)World2Local(p.point.position);
+				p.Update(pos, Hash(pos));
+			}
 			_points.Sort();
 
 			var cellCount = hashSize * hashSize;
@@ -58,7 +61,7 @@ namespace NearestNeighborSearch {
 			}
 			_cells [start.cellId] = new Cell (offset, count);
 		}
-		public IEnumerable<Neighbor> Find(Vector2 center) {
+		public IEnumerable<Neighbor<Vector2>> Find(Vector2 center) {
 			var limitSqrDist = 2f * cellSize * cellSize;
 			int x, y;
 			Discretize(center, out x, out y);
@@ -72,53 +75,10 @@ namespace NearestNeighborSearch {
 						var path = p.position - center;
 						var sqrDist = path.sqrMagnitude;
 						if (sqrDist < limitSqrDist)
-							yield return new Neighbor(id1, p, sqrDist);
+							yield return new Neighbor<Vector2>(id1, p, sqrDist);
 					}
 				}
 			}
-		}
-
-		public class Node : System.IComparable<Node> {
-			public int cellId;
-			public Vector2 position;
-			public Transform point;
-
-			public Node(Transform point) {
-				this.cellId = -1;
-				this.position = Vector2.zero;
-				this.point = point;
-			}
-			public void Update(System.Func<Vector2, int> Hash) {
-				position = (Vector2)point.position;
-				cellId = Hash (position);
-			}
-
-			#region IComparable implementation
-			public int CompareTo (Node other) {
-				if (other == null)
-					return -1;
-				return cellId - other.cellId;
-			}
-			#endregion
-		}
-
-		public struct Neighbor : System.IComparable<Neighbor> {
-			public readonly int id;
-			public readonly float sqrDistance;
-			public readonly Node node;
-
-			public Neighbor(int id, Node node, float sqrDistance) {
-				this.id = id;
-				this.node = node;
-				this.sqrDistance = sqrDistance;
-			}
-
-			#region IComparable implementation
-			public int CompareTo (Neighbor other) {
-				var diff = sqrDistance - other.sqrDistance;
-				return diff < 0 ? -1 : (diff > 0 ? +1 : 0);
-			}
-			#endregion
 		}
 
 		[System.Serializable]
@@ -131,16 +91,21 @@ namespace NearestNeighborSearch {
 				if (debugMode == DebugModeEnum.Normal)
 					return;
 
-				Gizmos.color = Color.yellow;
+				var c0 = Color.green;
+				var c1 = Color.red;
+				var limitCount = 9;
 
 				var points = hashGrid.Points;
 				var pointCount = points.Count;
 				for (var i = 0; i < pointCount; i++) {
 					var p = points [i];
-					var neighbors = new SortedList<float, Neighbor> ();
+					var neighbors = new SortedList<float, Neighbor<Vector2>> ();
 					foreach (var n in hashGrid.Find(p.position))
 						if (p != n.node)
 							neighbors.Add(n.sqrDistance, n);
+					
+					var neighborCount = neighbors.Count;
+					Gizmos.color = Color.Lerp(c0, c1, (float)(neighborCount - 1) / limitCount);
 
 					switch (debugMode) {
 					case DebugModeEnum.Distance:

@@ -11,6 +11,12 @@ namespace NearestNeighborSearch {
 		protected Cell[] _cells;
 
 		public Cell[] Cells { get { return _cells; } }
+		public Vector3 World2Local(Vector3 posWorld) {
+			return targetSpace.InverseTransformPoint (posWorld);
+		}
+		public Vector3 Local2World(Vector3 posLocal) {
+			return targetSpace.TransformPoint (posLocal);
+		}
 
 		public abstract void Add (Transform p);
 		public abstract void Clear ();
@@ -65,6 +71,47 @@ namespace NearestNeighborSearch {
 				this.startIndex = startIndex;
 				this.length = length;
 			}
+		}		
+		public class Node<Vec> : System.IComparable<Node<Vec>> {
+			public int cellId;
+			public Vec position;
+			public Transform point;
+			
+			public Node(Transform point) {
+				this.cellId = -1;
+				this.position = default(Vec);
+				this.point = point;
+			}
+			public void Update(Vec position, int cellId) {
+				this.position = position;
+				this.cellId = cellId;
+			}
+			
+			#region IComparable implementation
+			public int CompareTo (Node<Vec> other) {
+				if (other == null)
+					return -1;
+				return cellId - other.cellId;
+			}
+			#endregion
+		}		
+		public struct Neighbor<Vec> : System.IComparable<Neighbor<Vec>> {
+			public readonly int id;
+			public readonly float sqrDistance;
+			public readonly Node<Vec> node;
+			
+			public Neighbor(int id, Node<Vec> node, float sqrDistance) {
+				this.id = id;
+				this.node = node;
+				this.sqrDistance = sqrDistance;
+			}
+			
+			#region IComparable implementation
+			public int CompareTo (Neighbor<Vec> other) {
+				var diff = sqrDistance - other.sqrDistance;
+				return diff < 0 ? -1 : (diff > 0 ? +1 : 0);
+			}
+			#endregion
 		}
 	}
 }
