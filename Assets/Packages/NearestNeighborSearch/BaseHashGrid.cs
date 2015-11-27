@@ -4,11 +4,19 @@ using System.Collections.Generic;
 namespace NearestNeighborSearch {
 
 	public abstract class BaseHashGrid : MonoBehaviour {
+		public abstract	void Add (Transform p);
+		public abstract	void Clear ();
+		public abstract	void Build();
+	}
+	public abstract class BaseHashGrid<Vec> : BaseHashGrid {
 		public Transform targetSpace;
 		public float cellSize = 1f;
 		public int hashSize = 37;
 		
 		protected Cell[] _cells;
+
+		public abstract IEnumerable<Neighbor> Find(Vec center);
+		public abstract bool Nearest(Transform p, out Neighbor nearest);
 
 		public Cell[] Cells { get { return _cells; } }
 		public Vector3 World2Local(Vector3 posWorld) {
@@ -18,9 +26,6 @@ namespace NearestNeighborSearch {
 			return targetSpace.TransformPoint (posLocal);
 		}
 
-		public abstract void Add (Transform p);
-		public abstract void Clear ();
-		public abstract void Build();
 
 		protected void Discretize(Vector2 p, out int x, out int y) {
 			x = Repeat((int)(p.x / cellSize));
@@ -72,7 +77,7 @@ namespace NearestNeighborSearch {
 				this.length = length;
 			}
 		}		
-		public class Node<Vec> : System.IComparable<Node<Vec>> {
+		public class Node : System.IComparable<Node> {
 			public int cellId;
 			public Vec position;
 			public Transform point;
@@ -88,26 +93,26 @@ namespace NearestNeighborSearch {
 			}
 			
 			#region IComparable implementation
-			public int CompareTo (Node<Vec> other) {
+			public int CompareTo (Node other) {
 				if (other == null)
 					return -1;
 				return cellId - other.cellId;
 			}
 			#endregion
 		}		
-		public struct Neighbor<Vec> : System.IComparable<Neighbor<Vec>> {
+		public struct Neighbor : System.IComparable<Neighbor> {
 			public readonly int id;
 			public readonly float sqrDistance;
-			public readonly Node<Vec> node;
+			public readonly Node node;
 			
-			public Neighbor(int id, Node<Vec> node, float sqrDistance) {
+			public Neighbor(int id, Node node, float sqrDistance) {
 				this.id = id;
 				this.node = node;
 				this.sqrDistance = sqrDistance;
 			}
 			
 			#region IComparable implementation
-			public int CompareTo (Neighbor<Vec> other) {
+			public int CompareTo (Neighbor other) {
 				var diff = sqrDistance - other.sqrDistance;
 				return diff < 0 ? -1 : (diff > 0 ? +1 : 0);
 			}
